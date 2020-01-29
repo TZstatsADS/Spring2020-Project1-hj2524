@@ -7,7 +7,11 @@
 ### [Project Description](doc/)
 This is the first and only *individual* (as opposed to *team*) this semester. 
 
+<<<<<<< HEAD
 Term: Fall 2019123asda
+=======
+Term: Fall 2019ashdkfjhkjasdhfjk
+>>>>>>> 096dbdf4c59023af739ac892510239ca0cbf7470
 
 + Projec title: Lorem ipsum dolor sit amet
 + This project is conducted by [your name]
