@@ -1,5 +1,5 @@
 # Applied Data Science @ Columbia
-## Fall 2019
+## Fall 2019 123213
 ## Project 1: A "data story" on the songs of our times
 
 <img src="figs/title1.jpeg" width="500">
@@ -7,7 +7,7 @@
 ### [Project Description](doc/)
 This is the first and only *individual* (as opposed to *team*) this semester. 
 
-Term: Fall 2019
+Term: Fall 2019 hanboijao
 
 + Projec title: Lorem ipsum dolor sit amet
 + This project is conducted by [your name]
