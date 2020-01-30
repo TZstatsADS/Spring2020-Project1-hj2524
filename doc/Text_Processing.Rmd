@@ -56,9 +56,9 @@ stop_words <- c(stop_words$word, word)
 # clean the data and make a corpus
 corpus <- VCorpus(VectorSource(dt_lyrics$lyrics))%>%
   tm_map(content_transformer(tolower))%>%
+  tm_map(removeWords, stop_words)%>%
   tm_map(removePunctuation)%>%
   tm_map(removeWords, character(0))%>%
-  tm_map(removeWords, stop_words)%>%
   tm_map(removeNumbers)%>%
   tm_map(stripWhitespace)%>%
   tm_map(leadingWhitespace)
