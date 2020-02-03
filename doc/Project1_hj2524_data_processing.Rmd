@@ -1,5 +1,5 @@
 ---
-title: "Project1-hj2524"
+title: "Project1-hj2524_data_processing"
 author: "Hanbo JIAO"
 date: "2020/1/30"
 output: pdf_document
@@ -21,9 +21,11 @@ From the packages' descriptions:
 + `tidyverse` is an opinionated collection of R packages designed for data science. All packages share an underlying design philosophy, grammar, and data structures;
 + `tidytext` allows text mining using 'dplyr', 'ggplot2', and other tidy tools;
 + `DT` provides an R interface to the JavaScript library DataTables.
++ `wordcloud` is a package for plot wordcloud of data.
++
++
 
 ```{r load libraries, warning=FALSE, message=FALSE}
-install.packages("textdata")
 library(tm)
 library(data.table)
 library(tidytext)
@@ -31,14 +33,16 @@ library(tidyverse)
 library(DT)
 library(wordcloud)
 library(RColorBrewer)
-
+library(reshape2)
 ```
 
-### Step 1 - Load the data to be cleaned and processed,
+### Step 1 - Load the data to be cleaned and processed,     add team, 19xx s.
 
 ```{r}
 # load lyrics data
 load('../output/processed_lyrics.RData')
+
+
 artists <- read_csv("~/GitHub/Spring2020-Project1-hj2524/data/artists.csv")
 team_list<-artists%>%select(-Intro,-Origin)%>%filter(!is.na(Formed)|!is.na(Members))%>%filter(is.na(Formed)|!Formed==199)%>%pull(Artist)
 data<-dt_lyrics%>%mutate(team=artist%in%team_list)%>%filter(year>1000)%>%
@@ -64,9 +68,9 @@ tdm<-function(data){
 }
 
 
-wordcloudplot<-function(data){
-    tdm.overall_nolove<-data#%>%filter(term!="love")
-  wordcloud(tdm.overall_nolove$term, tdm.overall_nolove$`sum(count)`,
+wordcloudplot<-function(tdm_data){
+    tdm.overall<-tdm_data
+  wordcloud(tdm.overall$term, tdm.overall$`sum(count)`,
             scale=c(5,0.5),
             max.words=200,
             min.freq=1,
@@ -91,49 +95,62 @@ wordcloudplot(tdm_Pop)
 
 ```
 
-# team and individual
-```{r,fig.height=6, fig.width=6}
+# team and individual, top 15 words
+
+```{r}
 
 data_team_P<-data_Pop%>%filter(team)
 data_indiv_P<-data_Pop%>%filter(!team)
 
-
-wordcloudplot(tdm(data_team_P))
-wordcloudplot(tdm(data_indiv_P))
-
-
+top_15_team<-tdm(data_team_P)%>%mutate(perc=`sum(count)`/sum(`sum(count)`))%>%top_n(15,perc)%>%mutate(term=paste(term,"_t",sep=""))%>%mutate(term=reorder(term,perc))%>%mutate(team="Team")
+top_15_indiv<-tdm(data_indiv_P)%>%mutate(perc=`sum(count)`/sum(`sum(count)`))%>%top_n(15,perc)%>%mutate(term=paste(term,"_i",sep=""))%>%mutate(term=reorder(term,perc))%>%mutate(team="Individual")
 
 ```
 
 
+```{r}
+
+rbind(top_15_team,top_15_indiv)%>%
+  ggplot(aes(term, perc, fill = team)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~team, scales = "free_y") +
+    labs(y = "Top 15 words of Pop music",
+         x = NULL) +
+    coord_flip()
+```
 
 
 
 #sentiment
 
-
+##  + - word, top 10,  love most
 
 ```{r}
-library(janeaustenr)
-library(dplyr)
-library(stringr)
-
-
 
 nrc <- get_sentiments("nrc") 
-tdm_Pop%>%inner_join(nrc,by=c("term"="word"))
+bing<-get_sentiments("bing")
+pop_nrc<-tdm_Pop%>%inner_join(nrc,by=c("term"="word"))%>%rename("n"=`sum(count)`)
+pop_plot<-pop_nrc %>%
+  filter(sentiment%in%c("positive","negative"))%>%
+  group_by(sentiment)
 ```
 
 
 
 
 ```{r}
-
+ pop_plot%>%
+  top_n(10,n)%>%
+  ungroup() %>%
+  mutate(term = reorder(term, n)) %>%
+  ggplot(aes(term, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip()
 
 ```
-
-
-
 
 
 
@@ -142,14 +159,32 @@ tdm_Pop%>%inner_join(nrc,by=c("term"="word"))
 
 ```{r}
 
-
-
-tidy_books %>%
-  filter(book == "Emma") %>%
-  inner_join(nrc_joy) %>%
-  count(word, sort = TRUE)
-
-
+pop_plot%>%
+    acast(term ~ sentiment, value.var = "n", fill = 0) %>%
+    comparison.cloud(colors = c("gray20", "gray80"),
+                     max.words = 150)
 
 ```
+
+## 8  bing  + -  all type of music, different artist, - more than + ....
+
+
+
+```{r}
+data_plot_sentiment<-data%>%
+    group_by(genre,artist)%>%nest%>%mutate(tdm=map(data,tdm))%>%select(-data)%>%unnest(col=c("tdm"))%>%inner_join(bing,by=c("term"="word"))%>%rename("n"=`sum(count)`)%>%group_by(genre,artist,sentiment)%>%summarise(n=n())%>%spread(sentiment,n)%>%transmute(n=positive-negative)
+```
+
+
+
+```{r,fig.width=10, fig.height=5}
+
+data_plot_sentiment%>%drop_na()%>%
+  ggplot(aes(seq_along(n),n,fill=genre))+
+  geom_col(show.legend = F)+
+  facet_wrap(~genre,ncol=6,scales="free_x")+
+  labs(x="artists",y="sentiment")+
+  theme_light()
+```
+
 
