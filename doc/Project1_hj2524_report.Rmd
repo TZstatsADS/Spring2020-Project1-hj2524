@@ -2,7 +2,9 @@
 title: "Project1_hj2524_report"
 author: "Hanbo JIAO"
 date: "2020/2/2"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -42,13 +44,12 @@ source("../lib/function_defined.R")
 
 # load datasets
 load("../output/data_Pop.RData")
-load("../output/data_pop_plot.RData")
 load("../output/pop_plot_sentiment.RData")
 load("../output/data_plot_sentiment.RData")
 ```
 
 
-## Is Pop Music more positive?
+# Which words are used the most frequently in Pop Music?
 In this part, I would like to find the most frequently used words in lyrics of Pop music. 
 From the word cloud plot below, it shows that "love" is the most frequently word. 
 It is reasonable because when people talk about musics, the first word that came to mind might be "love".
@@ -57,7 +58,13 @@ It is reasonable because when people talk about musics, the first word that came
 wordcloudplot(tdm(data_Pop))
 ```
 
-Moreover, the below plots show the top 10 frequently used positive and negative words in lyrics and their frequencies.
+\newpage
+
+# Sentiment of songs
+
+Artists write lyrics and sing songs because they can express their emotions and sentiments through lyrics. So sentiment analysis is used in  our project. We use sentiment analysis based on "NRC" and "Bing" to figure out the emotions the words show.
+
+The below plots show the top 10 frequently used positive and negative words in lyrics and their frequencies.
 Those positive words, like "love" "kiss" , seem to be used more frequently than negative words, like "boy" "fall" "lie".
 It might be consistent with our intuition that there are more musics about "love" or showed a positive sentiment.
 
@@ -75,6 +82,8 @@ pop_plot_sentiment%>%
   theme_light()
 ```
 
+\newpage
+
 Next, we plot the word cloud for Pop music again. 
 But we take the sentiment into account and separate the positive and negative words.
 Same as before, "love" is the most frequently used word. 
@@ -87,8 +96,9 @@ pop_plot_sentiment%>%
                      max.words = 150)
 ```
 
+\newpage
 
-## Do artists use more positive words in their lyrics?
+# Do artists use more positive words in their lyrics?
 In this part, I would like to analyze for different types of musics, do artists use more positive words or more negative words in their lyrics?
 
 Those figures are ploted based on the difference between frequence of positive words and negative word. 
@@ -106,6 +116,9 @@ data_plot_sentiment%>%drop_na()%>%
 # Summary
 
 
++ For Pop music, "Love" is always the most frequently used word. However, positive words are not.
+
++ In different genres, almost all artists use more negative words in their lyrics.
 
 
 
