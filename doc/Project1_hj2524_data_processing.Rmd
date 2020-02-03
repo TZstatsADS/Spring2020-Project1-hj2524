@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-
+In this R notebook, we will process more on processed lyrics for our data analysis.
 
 ### Step 0 - Load all the required libraries
 
@@ -22,10 +22,23 @@ From the packages' descriptions:
 + `tidytext` allows text mining using 'dplyr', 'ggplot2', and other tidy tools;
 + `DT` provides an R interface to the JavaScript library DataTables.
 + `wordcloud` is a package for plot wordcloud of data.
-+
-+
++ `RColorBrewer` 
++ `reshape2`
 
 ```{r load libraries, warning=FALSE, message=FALSE}
+packages.used=c("tm", "tidytext","tidyverse","DT","wordcloud","data.table","RColorBrewer","reshape2")
+
+# check packages that need to be installed.
+packages.needed=setdiff(packages.used, 
+                        intersect(installed.packages()[,1], 
+                                  packages.used))
+
+# install additional packages
+if(length(packages.needed)>0){
+  install.packages(packages.needed, dependencies = TRUE)
+}
+
+# load packages
 library(tm)
 library(data.table)
 library(tidytext)
@@ -34,157 +47,78 @@ library(DT)
 library(wordcloud)
 library(RColorBrewer)
 library(reshape2)
+
+source("../lib/function_defined.R")
 ```
 
-### Step 1 - Load the data to be cleaned and processed,     add team, 19xx s.
-
+### Step 1 - Load the data to be cleaned and processed
 ```{r}
-# load lyrics data
+# load lyrics data from Text_processed
 load('../output/processed_lyrics.RData')
 
-
+# load artists information
 artists <- read_csv("~/GitHub/Spring2020-Project1-hj2524/data/artists.csv")
-team_list<-artists%>%select(-Intro,-Origin)%>%filter(!is.na(Formed)|!is.na(Members))%>%filter(is.na(Formed)|!Formed==199)%>%pull(Artist)
-data<-dt_lyrics%>%mutate(team=artist%in%team_list)%>%filter(year>1000)%>%
-  mutate(  year=fct_recode(cut(year-1900,breaks=seq(60,120,10)), 
-                                    "60s" = "(60,70]",
-                                    "70s" = "(70,80]",
-                                    "80s" = "(80,90]",
-                                    "90s" = "(90,100]",
-                                    "00s" = "(100,110]",
-                                    "10s" = "(110,120]")    )
 ```
 
-
-
-#function    1. tdm  2. wordplot
+### Step 2 - Determine whether artist is team or individual
 ```{r}
-tdm<-function(data){
-  corpus<-VCorpus(VectorSource(data$stemmedwords))
-  tdm.all<-TermDocumentMatrix(tm_map(corpus, stemDocument))
-  tdm.tidy=tidy(tdm.all)
-  tdm.overall=summarise(group_by(tdm.tidy, term), sum(count))
-  return(tdm.overall)
-}
+# find a list of team artist
+team_list<-artists%>%select(-Intro,-Origin)%>%filter(!is.na(Formed)|!is.na(Members))%>%filter(is.na(Formed)|!Formed==199)%>%pull(Artist)
 
-
-wordcloudplot<-function(tdm_data){
-    tdm.overall<-tdm_data
-  wordcloud(tdm.overall$term, tdm.overall$`sum(count)`,
-            scale=c(5,0.5),
-            max.words=200,
-            min.freq=1,
-            random.order=FALSE,
-            rot.per=0.3,
-            use.r.layout=T,
-            random.color=FALSE)
-}
-
+# add a column that indicates team or individual  
+data<-dt_lyrics%>%mutate(team=artist%in%team_list)%>%filter(year>1000)
 ```
 
-
-
-
-#plot and tdm  for pop music
-
-```{r,fig.height=6, fig.width=6}
+### Step 3 - Filter out Pop music only and Export data
+```{r}
+# Filter out Pop music
 data_Pop<-data%>%filter(genre%in% c("Pop"))
 
-tdm_Pop=tdm(data_Pop)
-wordcloudplot(tdm_Pop)
+# Export data
+save(data_Pop, file="../output/data_Pop.RData")
 
 ```
 
-# team and individual, top 15 words
-
+### Step 4 - Count the frequent of positive & negative words in lyrics of Pop music based on sentiment "nrc" and Export data
 ```{r}
-
-data_team_P<-data_Pop%>%filter(team)
-data_indiv_P<-data_Pop%>%filter(!team)
-
-top_15_team<-tdm(data_team_P)%>%mutate(perc=`sum(count)`/sum(`sum(count)`))%>%top_n(15,perc)%>%mutate(term=paste(term,"_t",sep=""))%>%mutate(term=reorder(term,perc))%>%mutate(team="Team")
-top_15_indiv<-tdm(data_indiv_P)%>%mutate(perc=`sum(count)`/sum(`sum(count)`))%>%top_n(15,perc)%>%mutate(term=paste(term,"_i",sep=""))%>%mutate(term=reorder(term,perc))%>%mutate(team="Individual")
-
-```
-
-
-```{r}
-
-rbind(top_15_team,top_15_indiv)%>%
-  ggplot(aes(term, perc, fill = team)) +
-    geom_col(show.legend = FALSE) +
-    facet_wrap(~team, scales = "free_y") +
-    labs(y = "Top 15 words of Pop music",
-         x = NULL) +
-    coord_flip()
-```
-
-
-
-#sentiment
-
-##  + - word, top 10,  love most
-
-```{r}
-
+# import sentiment nrc
 nrc <- get_sentiments("nrc") 
-bing<-get_sentiments("bing")
-pop_nrc<-tdm_Pop%>%inner_join(nrc,by=c("term"="word"))%>%rename("n"=`sum(count)`)
-pop_plot<-pop_nrc %>%
+
+# combine sentiment with TDM of lyrics of pop music.
+pop_nrc<-tdm(data_Pop)%>%inner_join(nrc,by=c("term"="word"))%>%rename("n"=`sum(count)`)
+
+# Keep those positive and negative sentiments data.
+pop_plot_sentiment<-pop_nrc %>%
   filter(sentiment%in%c("positive","negative"))%>%
   group_by(sentiment)
+
+# Export data
+save(pop_plot_sentiment, file="../output/pop_plot_sentiment.RData")
 ```
 
-
-
-
+### Step 5 - For different types of music, determine different types of artists are positive or negative based on sentiment "bing" and Export data
 ```{r}
- pop_plot%>%
-  top_n(10,n)%>%
-  ungroup() %>%
-  mutate(term = reorder(term, n)) %>%
-  ggplot(aes(term, n, fill = sentiment)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~sentiment, scales = "free_y") +
-  labs(y = "Contribution to sentiment",
-       x = NULL) +
-  coord_flip()
+# import sentiment bing
+bing<-get_sentiments("bing")
 
+# For any artists among all types of music, 
+# count the frequent of positive & negative words in lyrics of all of her songs,
+# and find if there are more positive words or more negative words in all of her songs.
+data_plot_sentiment<-
+  data%>%group_by(genre,artist)%>%
+  nest%>%mutate(tdm=map(data,tdm))%>%select(-data)%>%
+  unnest(col=c("tdm"))%>%
+  inner_join(bing,by=c("term"="word"))%>%rename("n"=`sum(count)`)%>%
+  group_by(genre,artist,sentiment)%>%summarise(n=n())%>%
+  spread(sentiment,n)%>%
+  transmute(n=positive-negative)
+
+# Export data
+save(data_plot_sentiment, file="../output/data_plot_sentiment.RData")
 ```
 
 
 
 
-
-
-```{r}
-
-pop_plot%>%
-    acast(term ~ sentiment, value.var = "n", fill = 0) %>%
-    comparison.cloud(colors = c("gray20", "gray80"),
-                     max.words = 150)
-
-```
-
-## 8  bing  + -  all type of music, different artist, - more than + ....
-
-
-
-```{r}
-data_plot_sentiment<-data%>%
-    group_by(genre,artist)%>%nest%>%mutate(tdm=map(data,tdm))%>%select(-data)%>%unnest(col=c("tdm"))%>%inner_join(bing,by=c("term"="word"))%>%rename("n"=`sum(count)`)%>%group_by(genre,artist,sentiment)%>%summarise(n=n())%>%spread(sentiment,n)%>%transmute(n=positive-negative)
-```
-
-
-
-```{r,fig.width=10, fig.height=5}
-
-data_plot_sentiment%>%drop_na()%>%
-  ggplot(aes(seq_along(n),n,fill=genre))+
-  geom_col(show.legend = F)+
-  facet_wrap(~genre,ncol=6,scales="free_x")+
-  labs(x="artists",y="sentiment")+
-  theme_light()
-```
 
 

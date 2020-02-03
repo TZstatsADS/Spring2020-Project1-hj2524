@@ -1,0 +1,112 @@
+---
+title: "Project1_hj2524_report"
+author: "Hanbo JIAO"
+date: "2020/2/2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Introduction
+
+The musics have played an important role in our daily life. In this project, we applied texting mining techniques to explore what artists expressed in their songs, what kind of sentiments they wanted to show based on the lyrics. 
+
+```{r include=FALSE,echo=FALSE, message=FALSE, warning=FALSE}
+packages.used=c("tm", "tidytext","tidyverse","DT","wordcloud","data.table","RColorBrewer","reshape2")
+
+# check packages that need to be installed.
+packages.needed=setdiff(packages.used, 
+                        intersect(installed.packages()[,1], 
+                                  packages.used))
+
+# install additional packages
+if(length(packages.needed)>0){
+  install.packages(packages.needed, dependencies = TRUE)
+}
+
+# load packages
+library(tm)
+library(data.table)
+library(tidytext)
+library(tidyverse)
+library(DT)
+library(wordcloud)
+library(RColorBrewer)
+library(reshape2)
+
+# load functions
+source("../lib/function_defined.R")
+
+# load datasets
+load("../output/data_Pop.RData")
+load("../output/data_pop_plot.RData")
+load("../output/pop_plot_sentiment.RData")
+load("../output/data_plot_sentiment.RData")
+```
+
+
+## Is Pop Music more positive?
+In this part, I would like to find the most frequently used words in lyrics of Pop music. 
+From the word cloud plot below, it shows that "love" is the most frequently word. 
+It is reasonable because when people talk about musics, the first word that came to mind might be "love".
+
+```{r,fig.height=4, fig.width=4,echo=FALSE, message=FALSE, warning=FALSE}
+wordcloudplot(tdm(data_Pop))
+```
+
+Moreover, the below plots show the top 10 frequently used positive and negative words in lyrics and their frequencies.
+Those positive words, like "love" "kiss" , seem to be used more frequently than negative words, like "boy" "fall" "lie".
+It might be consistent with our intuition that there are more musics about "love" or showed a positive sentiment.
+
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+pop_plot_sentiment%>%
+  top_n(10,n)%>%
+  ungroup() %>%
+  mutate(term = reorder(term, n)) %>%
+  ggplot(aes(term, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip()+
+  theme_light()
+```
+
+Next, we plot the word cloud for Pop music again. 
+But we take the sentiment into account and separate the positive and negative words.
+Same as before, "love" is the most frequently used word. 
+And we cannot conclude there are more positive word or not.
+
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+pop_plot_sentiment%>%
+    acast(term ~ sentiment, value.var = "n", fill = 0) %>%
+    comparison.cloud(colors = c("gray20", "gray80"),
+                     max.words = 150)
+```
+
+
+## Do artists use more positive words in their lyrics?
+In this part, I would like to analyze for different types of musics, do artists use more positive words or more negative words in their lyrics?
+
+Those figures are ploted based on the difference between frequence of positive words and negative word. 
+Unintuitively, for all types of musics, almost all artists use more negative words in their songs.
+```{r,fig.width=10, fig.height=5,echo=FALSE, message=FALSE, warning=FALSE}
+data_plot_sentiment%>%drop_na()%>%
+  ggplot(aes(seq_along(n),n,fill=genre))+
+  geom_col(show.legend = F)+
+  facet_wrap(~genre,ncol=6,scales="free_x")+
+  labs(x="artists",y="diff=(positive-negative)")+
+  theme_light()
+```
+
+
+# Summary
+
+
+
+
+
+
