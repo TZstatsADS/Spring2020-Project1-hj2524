@@ -123,3 +123,6 @@ data_plot_sentiment%>%drop_na()%>%
 
 
 
+
+
+
