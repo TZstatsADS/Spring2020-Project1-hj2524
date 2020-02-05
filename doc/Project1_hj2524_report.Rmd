@@ -1,10 +1,9 @@
 ---
-title: "Project1_hj2524_report"
+title: "More Love, More Positive?"
 author: "Hanbo JIAO"
 date: "2020/2/2"
 output:
   pdf_document: default
-  html_document: default
 ---
 
 ```{r setup, include=FALSE}
